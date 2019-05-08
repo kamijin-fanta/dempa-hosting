@@ -1,0 +1,70 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "service.proto",
+    "version": "version not set"
+  },
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/hello": {
+      "get": {
+        "operationId": "Hello",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/hostingHelloResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "your_name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "StaticHosting"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "hostingCreateProjectResponse": {
+      "type": "object"
+    },
+    "hostingCreateRevisionResponse": {
+      "type": "object",
+      "properties": {
+        "revision_id": {
+          "type": "string"
+        }
+      }
+    },
+    "hostingHelloResponse": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "hostingPutFileResponse": {
+      "type": "object"
+    },
+    "hostingRevisionCloseResponse": {
+      "type": "object"
+    }
+  }
+}

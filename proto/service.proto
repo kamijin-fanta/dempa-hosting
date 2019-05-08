@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "protoc-gen-swagger/options/annotations.proto";
+import "github.com/mwitkow/go-proto-validators/validator.proto";
+
+package moe.dempa.hosting;
+
+service StaticHosting {
+    rpc Hello(HelloRequest) returns (HelloResponse) {
+        option (google.api.http) = {
+          get: "/v1/hello"
+        };
+    }
+
+    rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse) {}
+    rpc CreateRevision(CreateRevisionRequest) returns (CreateRevisionResponse) {}
+    rpc PutFile(stream PutFileRequest) returns (PutFileResponse) {}
+    rpc RevisionClose(RevisionCloseRequest) returns (RevisionCloseResponse) {}
+}
+
+
+
+message HelloRequest {
+    string your_name = 1;
+}
+
+message HelloResponse {
+    string message = 1;
+}
+
+message CreateProjectRequest {
+    string project_id = 1;
+}
+
+message CreateProjectResponse {
+}
+
+message CreateRevisionRequest {
+    string project_id = 1;
+}
+
+message CreateRevisionResponse {
+    string revision_id = 1;
+}
+
+message PutFileRequest {
+    string project_id = 1;
+    string revision_id = 2;
+    string file_path = 3;
+    int32 total_file_size = 4;
+    bytes chunk = 5;
+}
+message PutFileResponse {
+}
+
+message RevisionCloseRequest {
+    string project_id = 1;
+    string revision_id = 2;
+    bool publish = 3;
+}
+message RevisionCloseResponse {
+}
