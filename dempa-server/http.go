@@ -34,7 +34,7 @@ func (s *HttpService) ServerMux() *http.ServeMux {
 			return
 		}
 
-		rootPath := filepath.Join("../user-data", meta.ProjectId, meta.PublishRevision)
+		rootPath := filepath.Join(s.service.UserContentDir, meta.ProjectId, meta.PublishRevision)
 		http.FileServer(http.Dir(rootPath)).ServeHTTP(writer, request)
 
 		//fmt.Fprintf(writer, "Hello %#v %#v\n", meta, err)

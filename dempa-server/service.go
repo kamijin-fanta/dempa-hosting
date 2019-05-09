@@ -29,6 +29,16 @@ type UserMetaRevision struct {
 }
 
 type DempaServiceImpl struct {
+	UserMetaDir    string
+	UserContentDir string
+}
+
+func NewDempaService(userMetaDir, userContentDir string) *DempaServiceImpl {
+	service := &DempaServiceImpl{
+		UserMetaDir:    userMetaDir,
+		UserContentDir: userContentDir,
+	}
+	return service
 }
 
 func (*DempaServiceImpl) Hello(ctx context.Context, req *moe_dempa_hosting.HelloRequest) (*moe_dempa_hosting.HelloResponse, error) {
@@ -39,8 +49,8 @@ func (*DempaServiceImpl) Hello(ctx context.Context, req *moe_dempa_hosting.Hello
 
 var projectRegex = regexp.MustCompile("^[a-z]+([-][a-z]+?)*$")
 
-func (*DempaServiceImpl) writeUserMeta(meta *UserMeta) error {
-	metaPath := filepath.Join("../user-meta", meta.ProjectId+".json")
+func (s *DempaServiceImpl) writeUserMeta(meta *UserMeta) error {
+	metaPath := filepath.Join(s.UserMetaDir, meta.ProjectId+".json")
 	file, err := os.Create(metaPath)
 	defer file.Close()
 	if err != nil {
@@ -50,9 +60,9 @@ func (*DempaServiceImpl) writeUserMeta(meta *UserMeta) error {
 	file.Write(bytes)
 	return nil
 }
-func (*DempaServiceImpl) readUserMeta(projectId string) (*UserMeta, error) {
+func (s *DempaServiceImpl) readUserMeta(projectId string) (*UserMeta, error) {
 	safeProjectId := strings.ReplaceAll(projectId, ".", "")
-	metaPath := filepath.Join("../user-meta", safeProjectId+".json")
+	metaPath := filepath.Join(s.UserMetaDir, safeProjectId+".json")
 	file, err := os.Open(metaPath)
 	defer file.Close()
 	if err != nil {
@@ -78,7 +88,7 @@ func (s *DempaServiceImpl) CreateProject(ctx context.Context, req *moe_dempa_hos
 	if !projectRegex.MatchString(req.ProjectId) {
 		return nil, status.New(codes.InvalidArgument, "project_id is invalid").Err()
 	}
-	metaPath := filepath.Join("../user-meta", req.ProjectId+".json")
+	metaPath := filepath.Join(s.UserMetaDir, req.ProjectId+".json")
 	if _, err := os.Stat(metaPath); !os.IsNotExist(err) {
 		return nil, status.New(codes.AlreadyExists, "Project already exists").Err()
 	}
@@ -119,7 +129,7 @@ func (s *DempaServiceImpl) CreateRevision(ctx context.Context, req *moe_dempa_ho
 	return &res, nil
 }
 
-func (*DempaServiceImpl) PutFile(stream moe_dempa_hosting.StaticHosting_PutFileServer) error {
+func (s *DempaServiceImpl) PutFile(stream moe_dempa_hosting.StaticHosting_PutFileServer) error {
 	fmt.Printf("Recive File \n")
 	projectId := ""
 	revisionId := ""
@@ -165,7 +175,7 @@ func (*DempaServiceImpl) PutFile(stream moe_dempa_hosting.StaticHosting_PutFileS
 			// todo new file
 
 			safePath := strings.ReplaceAll(in.FilePath, "..", "")
-			writePath := filepath.Join("../user-data/", projectId, revisionId, safePath)
+			writePath := filepath.Join(s.UserContentDir, projectId, revisionId, safePath)
 			fmt.Printf("  WritePath: %s\n", writePath)
 			writeDir := filepath.Dir(writePath)
 			os.MkdirAll(writeDir, os.ModeDir)

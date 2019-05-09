@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/kamijin-fanta/dempa-hosting/pb"
+	"github.com/urfave/cli"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -17,41 +18,93 @@ import (
 )
 
 func main() {
-	address := ":19003"
-	listenPort, err := net.Listen("tcp", address)
+	app := cli.NewApp()
+	app.Name = "dempa-server"
+	app.Usage = "static site hosting service"
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:   "token",
+			EnvVar: "DMP_TOKEN",
+		},
+	}
+	app.Commands = []cli.Command{
+		{
+			Name:  "server",
+			Usage: "start server",
+			Flags: []cli.Flag{
+				cli.IntFlag{
+					Name:   "grpc-port",
+					EnvVar: "DMP_GRPC_PORT",
+					Value:  19003,
+				},
+				cli.IntFlag{
+					Name:   "http-content-port",
+					EnvVar: "DMP_HTTP_CONTENT_PORT",
+					Value:  19004,
+				},
+				cli.StringFlag{
+					Name:   "users-json-path",
+					EnvVar: "DMP_USERS_JSON_PATH",
+					Value:  "../user-meta/__users.json",
+				},
+				cli.StringFlag{
+					Name:   "user-meta-dir",
+					EnvVar: "DMP_USER_META_DIR",
+					Value:  "../user-meta/",
+				},
+				cli.StringFlag{
+					Name:   "user-content-dir",
+					EnvVar: "DMP_USER_CONTENT_DIR",
+					Value:  "../user-content/",
+				},
+			},
+			Action: func(c *cli.Context) error {
+				grpcAddress := fmt.Sprintf(":%d", c.Int("grpc-port"))
+				listenPort, err := net.Listen("tcp", grpcAddress)
+				if err != nil {
+					log.Fatalln(err)
+				}
+				server := grpc.NewServer(
+					grpc.UnaryInterceptor(AuthServerInterceptor(c.String("users-json-path"))),
+				)
+				var dempaService moe_dempa_hosting.StaticHostingServer
+				dempaService = NewDempaService(c.String("user-meta-dir"), c.String("user-content-dir"))
+				moe_dempa_hosting.RegisterStaticHostingServer(server, dempaService)
+
+				done := make(chan bool)
+				go func() {
+					fmt.Printf("gRPC API server started with %s\n\n", grpcAddress)
+					err = server.Serve(listenPort)
+					if err != nil {
+						panic(err)
+					}
+					done <- true
+				}()
+
+				httpService := &HttpService{
+					service: dempaService.(*DempaServiceImpl),
+				}
+				go func() {
+					httpAddress := fmt.Sprintf(":%s", c.String("http-content-port"))
+					fmt.Printf("HTTP content server started with %s\n\n", httpAddress)
+					err := http.ListenAndServe(httpAddress, httpService.ServerMux())
+					if err != nil {
+						panic(err)
+					}
+					done <- true
+				}()
+				<-done
+
+				return nil
+			},
+		},
+	}
+
+	err := app.Run(os.Args)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal(err)
 	}
-	server := grpc.NewServer(
-		grpc.UnaryInterceptor(AuthServerInterceptor("../user-meta/__users.json")),
-	)
-	var dempaService moe_dempa_hosting.StaticHostingServer
-	dempaService = &DempaServiceImpl{}
-	moe_dempa_hosting.RegisterStaticHostingServer(server, dempaService)
-
-	done := make(chan bool)
-	go func() {
-		fmt.Printf("started with %s\n\n", address)
-		err = server.Serve(listenPort)
-		if err != nil {
-			panic(err)
-		}
-		done <- true
-	}()
-
-	httpService := &HttpService{
-		service: dempaService.(*DempaServiceImpl),
-	}
-	go func() {
-		httpAddress := ":8111"
-		fmt.Printf("started with %s\n\n", httpAddress)
-		err := http.ListenAndServe(httpAddress, httpService.ServerMux())
-		if err != nil {
-			panic(err)
-		}
-		done <- true
-	}()
-	<-done
+	return
 }
 
 type User struct {

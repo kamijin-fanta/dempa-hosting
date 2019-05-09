@@ -15,12 +15,8 @@ import (
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "boom"
-	app.Usage = "make an explosive entrance"
-	app.Action = func(c *cli.Context) error {
-		fmt.Println("dempa is static site hosting!")
-		return nil
-	}
+	app.Name = "dempa-cli"
+	app.Usage = "static site hosting deploy tool"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:   "token",
