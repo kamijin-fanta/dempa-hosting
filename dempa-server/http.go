@@ -20,7 +20,12 @@ func (s *HttpService) ServerMux() *http.ServeMux {
 		fmt.Printf("HttpReq: request.Host: %#v\n", request.Host)
 
 		pathArr := strings.Split(request.Host, ".")
-		projectId := pathArr[0]
+		projectArr := strings.Split(pathArr[0], "--")
+		projectId := projectArr[0]
+		overrideRevision := ""
+		if len(projectArr) == 2 {
+			overrideRevision = projectArr[1]
+		}
 
 		meta, err := s.service.readUserMeta(projectId)
 		fmt.Printf("Hello %#v %#v\n", meta, err)
@@ -29,12 +34,30 @@ func (s *HttpService) ServerMux() *http.ServeMux {
 			http.NotFound(writer, request)
 			return
 		}
-		if meta.PublishRevision == "" {
+		if meta.PublishRevision == "" || (len(projectArr) == 2 && overrideRevision == "") {
 			http.NotFound(writer, request)
 			return
 		}
+		if overrideRevision != "" {
+			found := false
+			for _, revision := range meta.Revisions {
+				if revision.RevisionId == overrideRevision {
+					found = true
+					break
+				}
+			}
+			if !found {
+				http.NotFound(writer, request)
+				return
+			}
+		}
 
-		rootPath := filepath.Join(s.service.UserContentDir, meta.ProjectId, meta.PublishRevision)
+		var rootPath string
+		if overrideRevision == "" {
+			rootPath = filepath.Join(s.service.UserContentDir, meta.ProjectId, meta.PublishRevision)
+		} else {
+			rootPath = filepath.Join(s.service.UserContentDir, meta.ProjectId, overrideRevision)
+		}
 		http.FileServer(http.Dir(rootPath)).ServeHTTP(writer, request)
 
 		//fmt.Fprintf(writer, "Hello %#v %#v\n", meta, err)
