@@ -36,19 +36,25 @@ func main() {
 			Usage:     "deploy files to service",
 			ArgsUsage: "DIRECTORY",
 			Flags: []cli.Flag{
-				cli.BoolTFlag{
+				cli.BoolFlag{
 					Name:  "publish",
 					Usage: "publish to production environment",
 				},
+				cli.StringFlag{
+					Name:  "project",
+					Usage: "Project ID",
+				},
 			},
 			Action: func(c *cli.Context) error {
+				projectId := c.String("project")
 				fmt.Println("deploy start...")
-				projectId := "project-id"
-				conn, service := MustNewService()
-				defer conn.Close()
+				fmt.Printf("ProjectId: %s\n", projectId)
 				if c.NArg() != 1 {
 					log.Fatal("must specif deploy directory")
 				}
+
+				conn, service := MustNewService()
+				defer conn.Close()
 				revision, err := service.CreateRevision(projectId)
 				if err != nil {
 					return err
@@ -65,11 +71,25 @@ func main() {
 				return nil
 			},
 		}, {
-			Name:    "add",
-			Aliases: []string{"a"},
-			Usage:   "add a task to the list",
+			Name:      "init",
+			Aliases:   []string{},
+			Usage:     "init project",
+			ArgsUsage: "PROJECT_ID",
 			Action: func(c *cli.Context) error {
-				fmt.Println("add command")
+				fmt.Println("init project...")
+				if c.NArg() != 1 {
+					log.Fatal("must specif project id")
+				}
+
+				projectId := c.Args()[0]
+
+				conn, service := MustNewService()
+				defer conn.Close()
+				err := service.CreateProject(projectId)
+				if err != nil {
+					return err
+				}
+				fmt.Printf("success create project: %s\n", projectId)
 				return nil
 			},
 		},
@@ -107,8 +127,20 @@ type ClientService struct {
 	client moe_dempa_hosting.StaticHostingClient
 }
 
+func (s *ClientService) CreateProject(projectId string) error {
+	createProjectReq := &moe_dempa_hosting.CreateProjectRequest{
+		ProjectId: projectId,
+	}
+	_, err := s.client.CreateProject(context.TODO(), createProjectReq)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 func (s *ClientService) CreateRevision(projectId string) (string, error) {
-	revisionRequest := &moe_dempa_hosting.CreateRevisionRequest{}
+	revisionRequest := &moe_dempa_hosting.CreateRevisionRequest{
+		ProjectId: projectId,
+	}
 	revisionResponse, err := s.client.CreateRevision(context.TODO(), revisionRequest)
 	if err != nil {
 		return "", err

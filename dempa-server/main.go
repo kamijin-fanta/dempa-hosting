@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"log"
 	"net"
+	"net/http"
 )
 
 func main() {
@@ -22,11 +23,30 @@ func main() {
 	var dempaService moe_dempa_hosting.StaticHostingServer
 	dempaService = &DempaServiceImpl{}
 	moe_dempa_hosting.RegisterStaticHostingServer(server, dempaService)
-	fmt.Printf("started with %s\n\n", address)
-	err = server.Serve(listenPort)
-	if err != nil {
-		panic(err)
+
+	done := make(chan bool)
+	go func() {
+		fmt.Printf("started with %s\n\n", address)
+		err = server.Serve(listenPort)
+		if err != nil {
+			panic(err)
+		}
+		done <- true
+	}()
+
+	httpService := &HttpService{
+		service: dempaService.(*DempaServiceImpl),
 	}
+	go func() {
+		httpAddress := ":8111"
+		fmt.Printf("started with %s\n\n", httpAddress)
+		err := http.ListenAndServe(httpAddress, httpService.ServerMux())
+		if err != nil {
+			panic(err)
+		}
+		done <- true
+	}()
+	<-done
 }
 
 func AuthServerInterceptor() grpc.UnaryServerInterceptor {
