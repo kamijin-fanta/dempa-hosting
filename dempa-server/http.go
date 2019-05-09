@@ -13,6 +13,9 @@ type HttpService struct {
 
 func (s *HttpService) ServerMux() *http.ServeMux {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/.well-known/", func(writer http.ResponseWriter, request *http.Request) {
+		http.Error(writer, "not permitted", http.StatusNotAcceptable)
+	})
 	mux.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 		fmt.Printf("HttpReq: request.Host: %#v\n", request.Host)
 

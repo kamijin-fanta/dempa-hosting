@@ -18,8 +18,18 @@ func main() {
 	app.Name = "boom"
 	app.Usage = "make an explosive entrance"
 	app.Action = func(c *cli.Context) error {
-		fmt.Println("boom! I say!")
+		fmt.Println("dempa is static site hosting!")
 		return nil
+	}
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:   "token",
+			EnvVar: "DMP_TOKEN",
+		},
+		cli.StringFlag{
+			Name:   "secret",
+			EnvVar: "DMP_SECRET",
+		},
 	}
 	app.Commands = []cli.Command{
 		{
@@ -53,7 +63,7 @@ func main() {
 					log.Fatal("must specif deploy directory")
 				}
 
-				conn, service := MustNewService()
+				conn, service := MustNewService(c.GlobalString("token"), c.GlobalString("secret"))
 				defer conn.Close()
 				revision, err := service.CreateRevision(projectId)
 				if err != nil {
@@ -83,7 +93,7 @@ func main() {
 
 				projectId := c.Args()[0]
 
-				conn, service := MustNewService()
+				conn, service := MustNewService(c.GlobalString("token"), c.GlobalString("secret"))
 				defer conn.Close()
 				err := service.CreateProject(projectId)
 				if err != nil {
@@ -101,11 +111,11 @@ func main() {
 	}
 }
 
-func MustNewService() (*grpc.ClientConn, *ClientService) {
+func MustNewService(token, secret string) (*grpc.ClientConn, *ClientService) {
 	conn, err := grpc.Dial(
 		"127.0.0.1:19003",
 		grpc.WithInsecure(),
-		grpc.WithUnaryInterceptor(ClientAuthInterceptor()),
+		grpc.WithUnaryInterceptor(ClientAuthInterceptor(token, secret)),
 	)
 	if err != nil {
 		log.Fatal("client connection error:", err)
@@ -114,9 +124,12 @@ func MustNewService() (*grpc.ClientConn, *ClientService) {
 	service := &ClientService{client: client}
 	return conn, service
 }
-func ClientAuthInterceptor() grpc.UnaryClientInterceptor {
+func ClientAuthInterceptor(token, secret string) grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		md := metadata.Pairs("secret", "password")
+		md := metadata.New(map[string]string{
+			"token":  token,
+			"secret": secret,
+		})
 		ctx = metadata.NewOutgoingContext(ctx, md)
 		err := invoker(ctx, method, req, reply, cc, opts...)
 		return err
