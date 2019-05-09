@@ -26,6 +26,12 @@ func main() {
 			Name:   "secret",
 			EnvVar: "DMP_SECRET",
 		},
+		cli.StringFlag{
+			Name:   "target",
+			Usage:  "server name",
+			EnvVar: "DMP_TARGET",
+			Value:  "hosting.dempa.moe:19003",
+		},
 	}
 	app.Commands = []cli.Command{
 		{
@@ -59,7 +65,11 @@ func main() {
 					log.Fatal("must specif deploy directory")
 				}
 
-				conn, service := MustNewService(c.GlobalString("token"), c.GlobalString("secret"))
+				conn, service := MustNewService(
+					c.GlobalString("target"),
+					c.GlobalString("token"),
+					c.GlobalString("secret"),
+				)
 				defer conn.Close()
 				revision, err := service.CreateRevision(projectId)
 				if err != nil {
@@ -89,7 +99,11 @@ func main() {
 
 				projectId := c.Args()[0]
 
-				conn, service := MustNewService(c.GlobalString("token"), c.GlobalString("secret"))
+				conn, service := MustNewService(
+					c.GlobalString("target"),
+					c.GlobalString("token"),
+					c.GlobalString("secret"),
+				)
 				defer conn.Close()
 				err := service.CreateProject(projectId)
 				if err != nil {
@@ -107,9 +121,9 @@ func main() {
 	}
 }
 
-func MustNewService(token, secret string) (*grpc.ClientConn, *ClientService) {
+func MustNewService(target, token, secret string) (*grpc.ClientConn, *ClientService) {
 	conn, err := grpc.Dial(
-		"127.0.0.1:19003",
+		target,
 		grpc.WithInsecure(),
 		grpc.WithUnaryInterceptor(ClientAuthInterceptor(token, secret)),
 	)

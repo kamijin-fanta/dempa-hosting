@@ -1,0 +1,16 @@
+version: '3'
+services:
+  dempa-server:
+    build:
+      context: .
+      dockerfile: Server.Dockerfile
+    ports:
+      - "19003:19003"
+      - "80:19004"
+    environment:
+      DMP_USERS_JSON_PATH: "/data/meta/__users.json"
+      DMP_USER_META_DIR: "/data/meta/"
+      DMP_USER_CONTENT_DIR: "/data/content/"
+    volumes:
+      - "./data:/data"
+    command: dempa server

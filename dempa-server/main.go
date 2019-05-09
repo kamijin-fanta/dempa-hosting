@@ -45,17 +45,17 @@ func main() {
 				cli.StringFlag{
 					Name:   "users-json-path",
 					EnvVar: "DMP_USERS_JSON_PATH",
-					Value:  "../user-meta/__users.json",
+					Value:  "../data/user-meta/__users.json",
 				},
 				cli.StringFlag{
 					Name:   "user-meta-dir",
 					EnvVar: "DMP_USER_META_DIR",
-					Value:  "../user-meta/",
+					Value:  "../data/user-meta/",
 				},
 				cli.StringFlag{
 					Name:   "user-content-dir",
 					EnvVar: "DMP_USER_CONTENT_DIR",
-					Value:  "../user-content/",
+					Value:  "../data/user-content/",
 				},
 			},
 			Action: func(c *cli.Context) error {
